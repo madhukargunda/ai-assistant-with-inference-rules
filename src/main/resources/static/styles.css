@@ -14,6 +14,9 @@ body {
     background-color: #7269ef;
     color: white;
     padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 .chat-messages {
     height: calc(100% - 140px);
@@ -78,7 +81,7 @@ body {
     overflow: hidden;
     padding: 0;
 }
-.avatar svg {
+.avatar svg, .avatar img {
     width: 30px;
     height: 30px;
 }

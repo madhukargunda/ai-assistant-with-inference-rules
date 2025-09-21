@@ -11,8 +11,9 @@ package io.madhu.inference.controller;
 import io.madhu.inference.util.UsageContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.metadata.Usage;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Flux;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -36,7 +38,7 @@ public class HandBookChatController {
     @Autowired
     private ChatClient chatClient;
 
-    @Value("classpath:/prompts/handbook-prompt_v3.st")
+    @Value("classpath:/prompts/handbook-prompt_v4.st")
     private Resource handBookPrompt;
 
     @Value("classpath:/handbook.txt")
@@ -47,12 +49,21 @@ public class HandBookChatController {
         log.info("The Chat method invoked HandBookChatController..........");
         Prompt prompt = buildPrompt(query);
         log.info("Initiated chat prompt User Query {}", query);
-        ChatClient.CallResponseSpec callResponseSpec = chatClient.prompt(buildPrompt(query))
-                .advisors(new SimpleLoggerAdvisor())
-                .call();
-        log.info("Response Received from LLM is {}", callResponseSpec.content());
-        UsageContext.set(callResponseSpec.chatResponse().getMetadata().getUsage());
-        return callResponseSpec.content();
+        ChatResponse chatResponse = chatClient.prompt(buildPrompt(query))
+                .call().chatResponse();
+        String content = chatResponse.getResult().getOutput().getText();  // safer than calling content() again
+        Usage usage = chatResponse.getMetadata().getUsage();
+        log.info("Response Received from LLM is {}", content);
+        UsageContext.set(usage);
+        return content;
+    }
+
+    @PostMapping("/api/chat/stream")
+    public Flux<String> chatStreaming(@RequestBody String query) throws IOException {
+        log.info("The Chat method invoked chat streaming..........");
+        Prompt prompt = buildPrompt(query);
+        log.info("Initiated chat prompt User Query from streaming {}", query);
+        return chatClient.prompt(buildPrompt(query)).stream().content();
     }
 
     private Prompt buildPrompt(String query) throws IOException {

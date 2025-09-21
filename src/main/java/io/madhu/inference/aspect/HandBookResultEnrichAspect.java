@@ -19,10 +19,11 @@ import org.springframework.ai.chat.metadata.Usage;
 @Aspect
 public class HandBookResultEnrichAspect {
 
-    @AfterReturning(pointcut = "execution(* com.example.controller.HandBookChatController.chat(..))",
+    @AfterReturning(pointcut = "execution(* io.madhu.inference.controller.HandBookChatController.chat(..))",
             returning = "response")
     public Object enrichResponse(Object response) {
-        if (response instanceof String res  ) {
+        log.info("Enriching the response");
+        if (response instanceof String res) {
             Usage usage = UsageContext.get();
             log.info("Total Number of tokens is Prompt Tokens : {}  Total Generation Tokens{} ,TOtal Tokens {} ",
                     usage.getPromptTokens(), usage.getCompletionTokens(), usage.getTotalTokens());

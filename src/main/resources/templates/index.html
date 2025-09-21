@@ -6,7 +6,6 @@
     <title>AI Chat</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.7/css/bootstrap.min.css" rel="stylesheet">
     <link href="/styles.css" rel="stylesheet">
-
 </head>
 <body>
 <div class="container py-4">
@@ -14,19 +13,34 @@
         <div class="col-md-8">
             <div class="chat-container position-relative">
                 <!-- Chat Header -->
-                <div class="chat-header d-flex align-items-center">
-                    <div class="avatar">
-                        <img src="/robot.svg" alt="Robot Avatar">
+                <div class="chat-header d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar">
+                            <img src="/robot.svg" alt="Robot Avatar">
+                        </div>
+                        <div>
+                            <h5 class="mb-0">ChatBot</h5>
+                            <p class="mb-0"><span class="online-indicator"></span>Online</p>
+                        </div>
                     </div>
-                    <div>
-                        <h5 class="mb-0">ChatBot</h5>
-                        <p class="mb-0"><span class="online-indicator"></span>Online</p>
+                    <!-- Endpoint Selection -->
+                    <div class="ms-3">
+                        <select id="endpointSelect" class="form-select form-select-sm">
+                            <option value="/api/chat" selected>Normal</option>
+                            <option value="/api/chat/stream">Stream</option>
+                        </select>
+                    </div>
+                    <!-- MCP Tools Dropdown -->
+                    <div class="ms-2">
+                        <select id="mcpTools" class="form-select form-select-sm">
+                            <option disabled selected>Loading Tools...</option>
+                        </select>
                     </div>
                 </div>
 
                 <!-- Chat Messages -->
                 <div class="chat-messages" id="chatMessages">
-                    <!-- Incoming Message -->
+                    <!-- Example Message -->
                     <div class="message d-flex incoming">
                         <div class="avatar">
                             <img src="/robot.svg" alt="Robot Avatar">
@@ -38,14 +52,13 @@
                             <div class="message-time">10:03 AM</div>
                         </div>
                     </div>
-
                 </div>
 
                 <!-- Chat Input -->
                 <div class="chat-input">
                     <div class="input-group">
                         <textarea class="form-control message-textarea" placeholder="Type your message..." aria-label="Type your message"></textarea>
-                        <button class="btn btn-primary" type="button">
+                        <button class="btn btn-primary" type="button" id="sendBtn">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-send" viewBox="0 0 16 16">
                                 <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576 6.636 10.07Zm6.787-8.201L1.591 6.602l4.339 2.76 7.494-7.493Z"/>
                             </svg>
@@ -60,10 +73,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.7/js/bootstrap.bundle.min.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script>
-
     const robotSvg = `<img src="/robot.svg" alt="Robot Avatar">`;
 
-    // Simple function to add a new message
     function addMessage(content, isOutgoing = false) {
         const messagesContainer = document.getElementById('chatMessages');
         const now = new Date();
@@ -75,61 +86,66 @@
         const avatarContent = isOutgoing ? 'Me' : robotSvg;
 
         messageDiv.innerHTML = `
-                <div class="avatar">${avatarContent}</div>
-                <div class="${isOutgoing ? 'text-end' : ''}">
-                    <div class="message-content">
-                        ${content}
-                    </div>
-                    <div class="message-time">${timeString}</div>
-                </div>
-            `;
+            <div class="avatar">${avatarContent}</div>
+            <div class="${isOutgoing ? 'text-end' : ''}">
+                <div class="message-content">${content}</div>
+                <div class="message-time">${timeString}</div>
+            </div>
+        `;
 
         messagesContainer.appendChild(messageDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
-    // Handle auto-resize of textarea
-    const textarea = document.querySelector('.message-textarea');
-    textarea.addEventListener('input', function() {
-        this.style.height = 'auto';
-        this.style.height = (this.scrollHeight) + 'px';
-        // Set max height
-        if (this.scrollHeight > 100) {
-            this.style.height = '100px';
-        }
-    });
+    // Fetch MCP tools list
+    function loadMcpTools() {
+        $.ajax('/api/mcp/tools', { type: 'GET' })
+            .done(function(tools) {
+                const select = document.getElementById('mcpTools');
+                select.innerHTML = '';
+                tools.forEach(tool => {
+                    const option = document.createElement('option');
+                    option.value = tool;
+                    option.textContent = tool;
+                    select.appendChild(option);
+                });
+            })
+            .fail(function() {
+                document.getElementById('mcpTools').innerHTML =
+                    '<option disabled>Error loading tools</option>';
+            });
+    }
+    loadMcpTools();
 
-    // Add event listener to send button
-    document.querySelector('.btn-primary').addEventListener('click', function() {
+    // Send message handler
+    document.getElementById('sendBtn').addEventListener('click', function() {
         const textarea = document.querySelector('.message-textarea');
         const message = textarea.value.trim();
+        const endpoint = document.getElementById('endpointSelect').value;
 
         if (message) {
             addMessage(message, true);
             textarea.value = '';
-            textarea.style.height = '50px'; // Reset height
+            textarea.style.height = '50px';
 
-            $.ajax('/api/chat', {
+            $.ajax(endpoint, {
                 type: 'POST',
                 data: JSON.stringify({ prompt: message}),
                 contentType: 'application/json'
             }).done(function(response) {
-                    console.log("Success:", response);
                     addMessage(response);
                 })
-                .fail(function(jqXHR, textStatus, errorThrown) {
-                    console.error("Error:", textStatus, errorThrown);
+                .fail(function() {
                     alert("Error fetching data.");
-                }
-            );
+                });
         }
     });
 
-    // Add event listener for pressing Enter key (without shift for newline)
+    // Press Enter to send
     document.querySelector('.message-textarea').addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault(); // Prevent default newline
-            document.querySelector('.btn-primary').click();
+            e.preventDefault();
+            document.getElementById('sendBtn').click();
         }
     });
 </script>

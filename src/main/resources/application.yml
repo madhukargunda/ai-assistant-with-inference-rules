@@ -12,7 +12,8 @@ spring:
       chat:
         enabled: true
         options:
-          temperature: 0.7
+          temperature: 0
+          top-p: 1
           model: gpt-4o
       embedding:
         options:

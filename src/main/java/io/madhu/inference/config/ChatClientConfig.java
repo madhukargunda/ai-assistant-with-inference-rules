@@ -29,8 +29,13 @@ public class ChatClientConfig {
     SimpleVectorStore simpleVectorStore;
 
     @Bean
+    public SimpleLoggerAdvisor simpleLoggerAdvisor() {
+        return new SimpleLoggerAdvisor();
+    }
+
+    @Bean
     public ChatClient chatClient(ChatClient.Builder chatClient, MessageWindowChatMemory messageWindowChatMemory) {
-        return chatClient.defaultAdvisors(new SimpleLoggerAdvisor()).
+        return chatClient.defaultAdvisors(simpleLoggerAdvisor()).
                 build();
     }
 

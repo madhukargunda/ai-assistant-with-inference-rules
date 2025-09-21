@@ -39,7 +39,6 @@ public class ChatController {
         log.info("Initiated chat prompt");
         String response = chatClient.prompt()
                 .user(query)
-               // .advisors(questionAnswerAdvisor)
                 .call()
                 .chatResponse()
                 .getResult()
